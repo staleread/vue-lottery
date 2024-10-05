@@ -1,8 +1,3 @@
-import pluginVue from 'eslint-plugin-vue'
+import antfu from '@antfu/eslint-config'
 
-export default [
-  ...pluginVue.configs['flat/recommended'],
-  {
-    rules: {}
-  }
-]
+export default antfu()

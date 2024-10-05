@@ -1,31 +1,31 @@
 {
   "name": "lab6",
-  "private": true,
-  "version": "0.0.0",
   "type": "module",
+  "version": "0.0.0",
+  "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint 'src/**/*.{js,vue}'",
-    "format": "prettier --write src/",
+    "check": "npx vue-tsc -p tsconfig.app.json",
+    "check:watch": "npx vue-tsc -p tsconfig.app.json --watch",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "prepare": "husky"
   },
   "dependencies": {
     "vue": "^3.4.37"
   },
   "devDependencies": {
-    "@rushstack/eslint-patch": "^1.10.4",
+    "@antfu/eslint-config": "^3.7.3",
     "@vitejs/plugin-vue": "^5.1.2",
-    "@vue/eslint-config-prettier": "^9.0.0",
     "autoprefixer": "^10.4.20",
-    "eslint": "^9.11.1",
-    "eslint-plugin-vue": "^9.28.0",
+    "eslint": "^9.12.0",
     "husky": "^9.1.6",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13",
     "typescript": "^5.5.3",
     "vite": "^5.4.1",
-    "vue-tsc": "^2.0.29"
+    "vue-tsc": "^2.1.6"
   }
 }

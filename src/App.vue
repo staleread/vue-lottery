@@ -1,3 +1,33 @@
+<script setup lang="ts">
+import type { Ref } from 'vue'
+import { ref } from 'vue'
+
+interface User {
+  id: number
+  name: string
+  dateOfBirth: string
+  email: string
+  phoneNumber: string
+}
+
+const users: Ref<User[]> = ref([
+  {
+    id: 1,
+    name: 'Nicolas',
+    dateOfBirth: '1975-08-19T23:15:30.000Z',
+    email: 'domain@gmail.com',
+    phoneNumber: '(380) 123-1234',
+  },
+  {
+    id: 3,
+    name: 'Bodya',
+    dateOfBirth: '1975-08-19T23:15:30.000Z',
+    email: 'domain@gmail.com',
+    phoneNumber: '(380) 123-1234',
+  },
+])
+</script>
+
 <template>
   <div class="min-h-screen bg-neutral-100 py-8">
     <div class="container mx-auto flex flex-col gap-4 items-center py-8">
@@ -46,10 +76,7 @@
         </hgroup>
         <form class="flex flex-col gap-3">
           <div class="flex flex-col">
-            <label
-              for="name"
-              class="font-bold text-neutral-900 mb-1"
-            >Name</label>
+            <label for="name" class="font-bold text-neutral-900 mb-1">Name</label>
             <input
               type="text"
               placeholder="Enter user name"
@@ -60,10 +87,7 @@
             </div>
           </div>
           <div class="flex flex-col">
-            <label
-              for="birth-date"
-              class="font-bold text-neutral-900 mb-1"
-            >Date of Birth</label>
+            <label for="birth-date" class="font-bold text-neutral-900 mb-1">Date of Birth</label>
             <input
               id="birth-date"
               type="date"
@@ -76,10 +100,7 @@
             </div>
           </div>
           <div class="flex flex-col">
-            <label
-              for="email"
-              class="font-bold text-neutral-900 mb-1"
-            >Email</label>
+            <label for="email" class="font-bold text-neutral-900 mb-1">Email</label>
             <input
               id="email"
               type="email"
@@ -92,10 +113,7 @@
             </div>
           </div>
           <div class="flex flex-col">
-            <label
-              for="phone"
-              class="font-bold text-neutral-900 mb-1"
-            >Phone number</label>
+            <label for="phone" class="font-bold text-neutral-900 mb-1">Phone number</label>
             <input
               id="phone"
               type="tel"
@@ -142,59 +160,32 @@
             </tr>
           </thead>
           <tbody class="text-neutral-500">
-            <tr class="border-b border-neutral-200">
+            <tr
+              v-for="(user, idx) in users"
+              :key="user.id"
+              class="border-b border-neutral-200"
+            >
               <td class="px-6 py-4 font-medium">
-                1
+                {{ idx + 1 }}
               </td>
               <td class="px-6 py-4">
-                Amsterdam
+                {{ user.name }}
               </td>
               <td class="px-6 py-4">
-                10/10/1990
+                {{ new Date(user.dateOfBirth).toLocaleDateString() }}
               </td>
               <td class="px-6 py-4">
-                email@domain.com
+                {{ user.email }}
               </td>
               <td class="px-6 py-4">
-                (380) 123-1234
-              </td>
-            </tr>
-            <tr class="border-b border-neutral-200">
-              <td class="px-6 py-4 font-medium">
-                1
-              </td>
-              <td class="px-6 py-4">
-                Amsterdam
-              </td>
-              <td class="px-6 py-4">
-                10/10/1990
-              </td>
-              <td class="px-6 py-4">
-                email@domain.com
-              </td>
-              <td class="px-6 py-4">
-                (380) 123-1234
-              </td>
-            </tr>
-            <tr class="border-b border-neutral-200">
-              <td class="px-6 py-4 font-medium">
-                1
-              </td>
-              <td class="px-6 py-4">
-                Amsterdam
-              </td>
-              <td class="px-6 py-4">
-                10/10/1990
-              </td>
-              <td class="px-6 py-4">
-                email@domain.com
-              </td>
-              <td class="px-6 py-4">
-                (380) 123-1234
+                {{ user.phoneNumber }}
               </td>
             </tr>
           </tbody>
         </table>
+        <div v-if="!users.length" class="text-neutral-400 px-6">
+          No users yet
+        </div>
       </section>
     </div>
   </div>

@@ -26,6 +26,26 @@ const users: Ref<User[]> = ref([
     phoneNumber: '(380) 123-1234',
   },
 ])
+
+const nameInput = ref('')
+const dateOfBirthInput = ref('')
+const emailInput = ref('')
+const phoneInput = ref('')
+
+function handleUserAdd() {
+  users.value.push({
+    id: 4,
+    name: nameInput.value,
+    dateOfBirth: dateOfBirthInput.value,
+    email: emailInput.value,
+    phoneNumber: phoneInput.value,
+  })
+
+  nameInput.value = ''
+  dateOfBirthInput.value = ''
+  emailInput.value = ''
+  phoneInput.value = ''
+}
 </script>
 
 <template>
@@ -74,10 +94,12 @@ const users: Ref<User[]> = ref([
             Please fill all the fields
           </p>
         </hgroup>
-        <form class="flex flex-col gap-3">
+        <form class="flex flex-col gap-3" @submit.prevent="handleUserAdd">
           <div class="flex flex-col">
             <label for="name" class="font-bold text-neutral-900 mb-1">Name</label>
             <input
+              id="name"
+              v-model="nameInput"
               type="text"
               placeholder="Enter user name"
               class="border-2 border-red-400 rounded py-1 px-3 bg-neutral-100"
@@ -90,6 +112,7 @@ const users: Ref<User[]> = ref([
             <label for="birth-date" class="font-bold text-neutral-900 mb-1">Date of Birth</label>
             <input
               id="birth-date"
+              v-model.lazy="dateOfBirthInput"
               type="date"
               name="birth-date"
               placeholder="Enter user name"
@@ -103,6 +126,7 @@ const users: Ref<User[]> = ref([
             <label for="email" class="font-bold text-neutral-900 mb-1">Email</label>
             <input
               id="email"
+              v-model="emailInput"
               type="email"
               name="email"
               placeholder="Enter email"
@@ -116,6 +140,7 @@ const users: Ref<User[]> = ref([
             <label for="phone" class="font-bold text-neutral-900 mb-1">Phone number</label>
             <input
               id="phone"
+              v-model="phoneInput"
               type="tel"
               name="phone"
               placeholder="Enter Phone number"
@@ -127,6 +152,7 @@ const users: Ref<User[]> = ref([
           </div>
           <div class="flex flex-row justify-end mt-6">
             <button
+              type="submit"
               class="bg-sky-400 hover:bg-sky-500 rounded px-5 py-1 font-bold text-white ease-out duration-300"
             >
               Save

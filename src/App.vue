@@ -1,51 +1,64 @@
-<script setup lang="ts">
-import type { Ref } from 'vue'
-import { ref } from 'vue'
+<script lang="ts">
+import type { User } from './services/types'
+import { defineComponent } from 'vue'
+import * as userService from './services/user-service'
 
-interface User {
-  id: number
-  name: string
-  dateOfBirth: string
-  email: string
-  phoneNumber: string
-}
+type DisplayUser =
+  Omit<User, 'dateOfBirth'> & { displayDateOfBirth: string }
 
-const users: Ref<User[]> = ref([
-  {
-    id: 1,
-    name: 'Nicolas',
-    dateOfBirth: '1975-08-19T23:15:30.000Z',
-    email: 'domain@gmail.com',
-    phoneNumber: '(380) 123-1234',
+export default defineComponent({
+  data() {
+    return {
+      usersData: [] as User[],
+      nameInput: '',
+      displayDateOfBirthInput: '',
+      emailInput: '',
+      phoneNumberInput: '',
+    }
   },
-  {
-    id: 3,
-    name: 'Bodya',
-    dateOfBirth: '1975-08-19T23:15:30.000Z',
-    email: 'domain@gmail.com',
-    phoneNumber: '(380) 123-1234',
+  computed: {
+    users(): DisplayUser[] {
+      return this.usersData.map(u => this.toDisplayUser(u))
+    },
   },
-])
+  async created() {
+    this.usersData = await userService.getUsers()
+  },
+  methods: {
+    toDisplayUser(user: User): DisplayUser {
+      const displayDate = new Date(user.dateOfBirth)
+        .toISOString()
+        .substring(0, 10)
 
-const nameInput = ref('')
-const dateOfBirthInput = ref('')
-const emailInput = ref('')
-const phoneInput = ref('')
+      return {
+        id: user.id,
+        name: user.name,
+        displayDateOfBirth: displayDate,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+      }
+    },
+    async handleUserAdd() {
+      const date = new Date(this.displayDateOfBirthInput)
+      const dateOfBirthJson = date.toJSON()
 
-function handleUserAdd() {
-  users.value.push({
-    id: 4,
-    name: nameInput.value,
-    dateOfBirth: dateOfBirthInput.value,
-    email: emailInput.value,
-    phoneNumber: phoneInput.value,
-  })
+      const newId = await userService.addUser({
+        name: this.nameInput,
+        dateOfBirth: dateOfBirthJson,
+        email: this.emailInput,
+        phoneNumber: this.phoneNumberInput,
+      })
 
-  nameInput.value = ''
-  dateOfBirthInput.value = ''
-  emailInput.value = ''
-  phoneInput.value = ''
-}
+      const newUser = await userService.getUser(newId)
+      this.users.push(this.toDisplayUser(newUser))
+
+      this.nameInput = ''
+      this.displayDateOfBirthInput = ''
+      this.emailInput = ''
+      this.phoneNumberInput = ''
+    },
+  },
+})
 </script>
 
 <template>
@@ -112,7 +125,7 @@ function handleUserAdd() {
             <label for="birth-date" class="font-bold text-neutral-900 mb-1">Date of Birth</label>
             <input
               id="birth-date"
-              v-model.lazy="dateOfBirthInput"
+              v-model.lazy="displayDateOfBirthInput"
               type="date"
               name="birth-date"
               placeholder="Enter user name"
@@ -140,7 +153,7 @@ function handleUserAdd() {
             <label for="phone" class="font-bold text-neutral-900 mb-1">Phone number</label>
             <input
               id="phone"
-              v-model="phoneInput"
+              v-model="phoneNumberInput"
               type="tel"
               name="phone"
               placeholder="Enter Phone number"
@@ -198,7 +211,7 @@ function handleUserAdd() {
                 {{ user.name }}
               </td>
               <td class="px-6 py-4">
-                {{ new Date(user.dateOfBirth).toLocaleDateString() }}
+                {{ user.displayDateOfBirth }}
               </td>
               <td class="px-6 py-4">
                 {{ user.email }}

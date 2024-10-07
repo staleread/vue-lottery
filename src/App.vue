@@ -1,59 +1,141 @@
-<script lang="ts">
-import type { User } from './services/types'
+<script script lang="ts">
+import type { User } from './types'
 import { defineComponent } from 'vue'
-import * as userService from './services/user-service'
+import {
+  addUser,
+  getUserById,
+  getUsers,
+} from './local-storage-manager'
+import {
+  validateDateOfBirth,
+  validateEmail,
+  validateName,
+  validatePhoneNumber,
+} from './validation'
 
-type DisplayUser =
-  Omit<User, 'dateOfBirth'> & { displayDateOfBirth: string }
+interface AppState {
+  users: User[]
+  nameInput: string
+  dateOfBirthInput: string
+  emailInput: string
+  phoneNumberInput: string
+  nameResult: string | null
+  dateOfBirthResult: string | null
+  emailResult: string | null
+  phoneNumberResult: string | null
+  nameTimeout: number | null
+  dateOfBirthTimeout: number | null
+  emailTimeout: number | null
+  phoneNumberTimeout: number | null
+}
+
+const DEBOUNCE_TIMEOUT = 500
 
 export default defineComponent({
-  data() {
+  data(): AppState {
     return {
-      usersData: [] as User[],
+      users: [],
       nameInput: '',
-      displayDateOfBirthInput: '',
+      dateOfBirthInput: '',
       emailInput: '',
       phoneNumberInput: '',
+      nameResult: null,
+      dateOfBirthResult: null,
+      emailResult: null,
+      phoneNumberResult: null,
+      nameTimeout: null,
+      dateOfBirthTimeout: null,
+      emailTimeout: null,
+      phoneNumberTimeout: null,
     }
   },
   computed: {
-    users(): DisplayUser[] {
-      return this.usersData.map(u => this.toDisplayUser(u))
-    },
   },
-  async created() {
-    this.usersData = await userService.getUsers()
+  watch: {
+  },
+  created() {
+    this.users = getUsers()
   },
   methods: {
-    toDisplayUser(user: User): DisplayUser {
-      const displayDate = new Date(user.dateOfBirth)
-        .toISOString()
-        .substring(0, 10)
+    handleNameInput(e: Event) {
+      this.nameInput = (e.target as HTMLInputElement).value
 
-      return {
-        id: user.id,
-        name: user.name,
-        displayDateOfBirth: displayDate,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
+      if (this.nameTimeout) {
+        clearTimeout(this.nameTimeout)
       }
+      this.nameTimeout = setTimeout(() => {
+        this.nameResult = validateName(this.nameInput)
+      }, DEBOUNCE_TIMEOUT)
     },
-    async handleUserAdd() {
-      const date = new Date(this.displayDateOfBirthInput)
-      const dateOfBirthJson = date.toJSON()
+    handleDateOfBirthInput(e: Event) {
+      this.dateOfBirthInput = (e.target as HTMLInputElement).value
 
-      const newId = await userService.addUser({
+      if (this.dateOfBirthTimeout) {
+        clearTimeout(this.dateOfBirthTimeout)
+      }
+      this.dateOfBirthTimeout = setTimeout(() => {
+        this.dateOfBirthResult = validateDateOfBirth(this.dateOfBirthInput)
+      }, DEBOUNCE_TIMEOUT)
+    },
+    handleEmailInput(e: Event) {
+      this.emailInput = (e.target as HTMLInputElement).value
+
+      if (this.emailTimeout) {
+        clearTimeout(this.emailTimeout)
+      }
+      this.emailTimeout = setTimeout(() => {
+        this.emailResult = validateEmail(this.emailInput)
+      }, DEBOUNCE_TIMEOUT)
+    },
+    handlePhoneNumberInput(e: Event) {
+      this.phoneNumberInput = (e.target as HTMLInputElement).value
+
+      if (this.phoneNumberTimeout) {
+        clearTimeout(this.phoneNumberTimeout)
+      }
+      this.phoneNumberTimeout = setTimeout(() => {
+        this.phoneNumberResult = validatePhoneNumber(this.phoneNumberInput)
+      }, DEBOUNCE_TIMEOUT)
+    },
+    handleUserAdd() {
+      if (!this.nameResult) {
+        this.nameResult = validateName(this.nameInput)
+      }
+      if (!this.dateOfBirthResult) {
+        this.dateOfBirthResult = validateDateOfBirth(this.dateOfBirthInput)
+      }
+      if (!this.emailResult) {
+        this.emailResult = validateEmail(this.emailInput)
+      }
+      if (!this.phoneNumberResult) {
+        this.phoneNumberResult = validatePhoneNumber(this.phoneNumberInput)
+      }
+
+      if (this.nameResult
+        || this.dateOfBirthResult
+        || this.emailResult
+        || this.phoneNumberResult
+      ) {
+        return
+      }
+
+      const userId = addUser({
         name: this.nameInput,
-        dateOfBirth: dateOfBirthJson,
+        dateOfBirth: this.dateOfBirthInput,
         email: this.emailInput,
         phoneNumber: this.phoneNumberInput,
       })
 
-      const newUser = await userService.getUser(newId)
-      this.users.push(this.toDisplayUser(newUser))
+      const newUser = getUserById(userId)
+      this.users.push(newUser)
+
+      this.nameResult = null
+      this.dateOfBirthResult = null
+      this.emailResult = null
+      this.phoneNumberResult = null
 
       this.nameInput = ''
-      this.displayDateOfBirthInput = ''
+      this.dateOfBirthInput = ''
       this.emailInput = ''
       this.phoneNumberInput = ''
     },
@@ -107,60 +189,83 @@ export default defineComponent({
             Please fill all the fields
           </p>
         </hgroup>
-        <form class="flex flex-col gap-3" @submit.prevent="handleUserAdd">
+        <form class="flex flex-col gap-3" novalidate @submit.prevent="handleUserAdd">
           <div class="flex flex-col">
             <label for="name" class="font-bold text-neutral-900 mb-1">Name</label>
             <input
               id="name"
-              v-model="nameInput"
+              :value="nameInput"
               type="text"
               placeholder="Enter user name"
-              class="border-2 border-red-400 rounded py-1 px-3 bg-neutral-100"
+              :class="{
+                'border-neutral-200 border': nameResult === null,
+                'border-red-400 border-2': nameResult?.length,
+                'border-green-400 border-2': nameResult === '',
+              }"
+              class="rounded py-1 px-3 bg-neutral-100"
+              @input="handleNameInput"
             >
-            <div class="text-red-500 text-sm">
-              This value is required
+            <div v-if="nameResult?.length" class="text-red-500 text-sm">
+              {{ nameResult }}
             </div>
           </div>
           <div class="flex flex-col">
             <label for="birth-date" class="font-bold text-neutral-900 mb-1">Date of Birth</label>
             <input
               id="birth-date"
-              v-model.lazy="displayDateOfBirthInput"
+              :value="dateOfBirthInput"
               type="date"
               name="birth-date"
-              placeholder="Enter user name"
-              class="border border-neutral-200 rounded py-1 px-3 bg-neutral-100"
+              :class="{
+                'border-neutral-200 border': dateOfBirthResult === null,
+                'border-red-400 border-2': dateOfBirthResult?.length,
+                'border-green-400 border-2': dateOfBirthResult === '',
+              }"
+              class="rounded py-1 px-3 bg-neutral-100"
+              @input="handleDateOfBirthInput"
             >
-            <div class="text-red-500 text-sm hidden">
-              This value is required
+            <div v-if="dateOfBirthResult?.length" class="text-red-500 text-sm">
+              {{ dateOfBirthResult }}
             </div>
           </div>
           <div class="flex flex-col">
             <label for="email" class="font-bold text-neutral-900 mb-1">Email</label>
             <input
               id="email"
-              v-model="emailInput"
+              :value="emailInput"
               type="email"
               name="email"
               placeholder="Enter email"
-              class="border border-neutral-200 rounded py-1 px-3 bg-neutral-100"
+              :class="{
+                'border-neutral-200 border': emailResult === null,
+                'border-red-400 border-2': emailResult?.length,
+                'border-green-400 border-2': emailResult === '',
+              }"
+              class="rounded py-1 px-3 bg-neutral-100"
+              @input="handleEmailInput"
             >
-            <div class="text-red-500 text-sm hidden">
-              This value is required
+            <div v-if="emailResult?.length" class="text-red-500 text-sm">
+              {{ emailResult }}
             </div>
           </div>
           <div class="flex flex-col">
             <label for="phone" class="font-bold text-neutral-900 mb-1">Phone number</label>
             <input
               id="phone"
-              v-model="phoneNumberInput"
+              :value="phoneNumberInput"
               type="tel"
               name="phone"
               placeholder="Enter Phone number"
-              class="border border-neutral-200 rounded py-1 px-3 bg-neutral-100"
+              :class="{
+                'border-neutral-200 border': phoneNumberResult === null,
+                'border-red-400 border-2': phoneNumberResult?.length,
+                'border-green-400 border-2': phoneNumberResult === '',
+              }"
+              class="rounded py-1 px-3 bg-neutral-100"
+              @input="handlePhoneNumberInput"
             >
-            <div class="text-red-500 text-sm hidden">
-              This value is required
+            <div v-if="phoneNumberResult?.length" class="text-red-500 text-sm">
+              {{ phoneNumberResult }}
             </div>
           </div>
           <div class="flex flex-row justify-end mt-6">
@@ -211,7 +316,7 @@ export default defineComponent({
                 {{ user.name }}
               </td>
               <td class="px-6 py-4">
-                {{ user.displayDateOfBirth }}
+                {{ user.dateOfBirth }}
               </td>
               <td class="px-6 py-4">
                 {{ user.email }}

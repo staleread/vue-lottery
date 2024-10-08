@@ -15,6 +15,7 @@ import {
 
 interface AppState {
   users: User[]
+  winnerUsers: Map<number, User>
   nameInput: string
   dateOfBirthInput: string
   emailInput: string
@@ -30,11 +31,13 @@ interface AppState {
 }
 
 const DEBOUNCE_TIMEOUT = 500
+const MAX_WINNERS = 3
 
 export default defineComponent({
   data(): AppState {
     return {
       users: [],
+      winnerUsers: new Map(),
       nameInput: '',
       dateOfBirthInput: '',
       emailInput: '',
@@ -50,13 +53,15 @@ export default defineComponent({
     }
   },
   computed: {
-  },
-  watch: {
+    canSelectWinner() {
+      return this.winnerUsers.size < MAX_WINNERS && this.winnerUsers.size < this.users.length
+    },
   },
   created() {
     this.users = getUsers()
   },
   methods: {
+    // generic methods vs readible
     handleNameInput(e: Event) {
       this.nameInput = (e.target as HTMLInputElement).value
 
@@ -139,6 +144,14 @@ export default defineComponent({
       this.emailInput = ''
       this.phoneNumberInput = ''
     },
+    selectNewWinner() {
+      // should I check the ability to select winner if the button handles this
+
+      const notWinners = this.users.filter((u: User) => !this.winnerUsers.has(u.id))
+      const newWinner = notWinners[Math.floor(Math.random() * notWinners.length)]
+
+      this.winnerUsers.set(newWinner.id, newWinner)
+    },
   },
 })
 </script>
@@ -153,18 +166,13 @@ export default defineComponent({
           class="flex-1 border border-neutral-200 rounded py-1 px-2 flex gap-2 items-center"
         >
           <button
+            v-for="winner in winnerUsers.values()"
+            :key="winner.id"
             class="bg-sky-500 hover:bg-red-400 ease-out duration-300 rounded h-5 flex gap-2 justify-between items-center px-1"
+            @click="() => winnerUsers.delete(winner.id)"
           >
             <p class="text-xs font-bold text-white">
-              Amsterdam
-            </p>
-            <span class="text-xs text-white font-bold">X</span>
-          </button>
-          <button
-            class="bg-sky-500 hover:bg-red-400 ease-out duration-300 rounded h-5 flex gap-2 justify-between items-center px-1"
-          >
-            <p class="text-xs font-bold text-white">
-              Washington
+              {{ winner.name }}
             </p>
             <span class="text-xs text-white font-bold">X</span>
           </button>
@@ -173,7 +181,9 @@ export default defineComponent({
           </p>
         </div>
         <button
-          class="bg-sky-400 hover:bg-sky-500 ease-out duration-300 rounded px-3 py-1 font-bold text-white"
+          class="bg-sky-400 hover:bg-sky-500 ease-out duration-300 rounded px-3 py-1 font-bold text-white disabled:bg-sky-200"
+          :disabled="!canSelectWinner"
+          @click="selectNewWinner"
         >
           New winner
         </button>
@@ -327,6 +337,7 @@ export default defineComponent({
             </tr>
           </tbody>
         </table>
+        <!-- is "div" semantically corrent here? -->
         <div v-if="!users.length" class="text-neutral-400 px-6">
           No users yet
         </div>

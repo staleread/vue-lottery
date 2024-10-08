@@ -1,162 +1,112 @@
-<script script lang="ts">
+<script setup lang="ts">
 import type { User } from './types'
-import { defineComponent } from 'vue'
-import {
-  addUser,
-  getUserById,
-  getUsers,
-} from './local-storage-manager'
-import {
-  validateDateOfBirth,
-  validateEmail,
-  validateName,
-  validatePhoneNumber,
-} from './validation'
+import type { FieldType } from './validation'
+import { computed, onBeforeMount, reactive, ref } from 'vue'
+import { addUser, getUserById, getUsers } from './local-storage-manager'
+import { validationStrategy } from './validation'
 
-interface AppState {
-  users: User[]
-  winnerUsers: Map<number, User>
-  nameInput: string
-  dateOfBirthInput: string
-  emailInput: string
-  phoneNumberInput: string
-  nameResult: string | null
-  dateOfBirthResult: string | null
-  emailResult: string | null
-  phoneNumberResult: string | null
-  nameTimeout: number | null
-  dateOfBirthTimeout: number | null
-  emailTimeout: number | null
-  phoneNumberTimeout: number | null
+// users list
+const users = ref<User[]>([])
+
+onBeforeMount(() => users.value = getUsers())
+
+function formatDate(isoDate: string) {
+  return new Date(isoDate).toLocaleDateString()
 }
 
+// user form
 const DEBOUNCE_TIMEOUT = 500
+
+interface Field {
+  type: FieldType
+  input: string
+  result: string | null
+  timeout: number | null
+}
+
+const name: Field = reactive({
+  type: 'name',
+  input: '',
+  result: null,
+  timeout: null,
+})
+
+const dateOfBirth: Field = reactive({
+  type: 'dateOfBirth',
+  input: '',
+  result: null,
+  timeout: null,
+})
+
+const email: Field = reactive({
+  type: 'email',
+  input: '',
+  result: null,
+  timeout: null,
+})
+
+const phoneNumber: Field = reactive({
+  type: 'phoneNumber',
+  input: '',
+  result: null,
+  timeout: null,
+})
+
+function triggerFieldValidation(field: Field) {
+  if (field.timeout) {
+    clearTimeout(field.timeout)
+  }
+  field.timeout = setTimeout(
+    () => field.result = validationStrategy[field.type](field.input),
+    DEBOUNCE_TIMEOUT,
+  )
+}
+
+function handleUserAdd() {
+  const fields = [name, dateOfBirth, email, phoneNumber]
+
+  fields.forEach((field: Field) => {
+    if (!field.result) {
+      field.result = validationStrategy[field.type](field.input)
+    }
+  })
+
+  if (fields.some((f: Field) => f.result)) {
+    return
+  }
+
+  const userId = addUser({
+    name: name.input,
+    dateOfBirth: dateOfBirth.input,
+    email: email.input,
+    phoneNumber: phoneNumber.input,
+  })
+
+  const newUser = getUserById(userId)
+  users.value.push(newUser)
+
+  fields.forEach((field: Field) =>
+    Object.assign(field, { input: '', result: null }),
+  )
+}
+
+// winners section
 const MAX_WINNERS = 3
 
-export default defineComponent({
-  data(): AppState {
-    return {
-      users: [],
-      winnerUsers: new Map(),
-      nameInput: '',
-      dateOfBirthInput: '',
-      emailInput: '',
-      phoneNumberInput: '',
-      nameResult: null,
-      dateOfBirthResult: null,
-      emailResult: null,
-      phoneNumberResult: null,
-      nameTimeout: null,
-      dateOfBirthTimeout: null,
-      emailTimeout: null,
-      phoneNumberTimeout: null,
-    }
-  },
-  computed: {
-    canSelectWinner() {
-      return this.winnerUsers.size < MAX_WINNERS && this.winnerUsers.size < this.users.length
-    },
-  },
-  created() {
-    this.users = getUsers()
-  },
-  methods: {
-    formatDate(isoDate: string) {
-      return new Date(isoDate).toLocaleDateString()
-    },
-    // generic methods vs readible
-    handleNameInput(e: Event) {
-      this.nameInput = (e.target as HTMLInputElement).value
+const winnerUsers = ref<Map<number, User>>(new Map())
 
-      if (this.nameTimeout) {
-        clearTimeout(this.nameTimeout)
-      }
-      this.nameTimeout = setTimeout(() => {
-        this.nameResult = validateName(this.nameInput)
-      }, DEBOUNCE_TIMEOUT)
-    },
-    handleDateOfBirthInput(e: Event) {
-      this.dateOfBirthInput = (e.target as HTMLInputElement).value
+const canSelectWinner = computed(() =>
+  winnerUsers.value.size < Math.min(MAX_WINNERS, users.value.length),
+)
 
-      if (this.dateOfBirthTimeout) {
-        clearTimeout(this.dateOfBirthTimeout)
-      }
-      this.dateOfBirthTimeout = setTimeout(() => {
-        this.dateOfBirthResult = validateDateOfBirth(this.dateOfBirthInput)
-      }, DEBOUNCE_TIMEOUT)
-    },
-    handleEmailInput(e: Event) {
-      this.emailInput = (e.target as HTMLInputElement).value
+function selectNewWinner() {
+  const notWinners
+    = users.value.filter((u: User) => !winnerUsers.value.has(u.id))
+  const newWinner
+    = notWinners[Math.floor(Math.random() * notWinners.length)]
 
-      if (this.emailTimeout) {
-        clearTimeout(this.emailTimeout)
-      }
-      this.emailTimeout = setTimeout(() => {
-        this.emailResult = validateEmail(this.emailInput)
-      }, DEBOUNCE_TIMEOUT)
-    },
-    handlePhoneNumberInput(e: Event) {
-      this.phoneNumberInput = (e.target as HTMLInputElement).value
-
-      if (this.phoneNumberTimeout) {
-        clearTimeout(this.phoneNumberTimeout)
-      }
-      this.phoneNumberTimeout = setTimeout(() => {
-        this.phoneNumberResult = validatePhoneNumber(this.phoneNumberInput)
-      }, DEBOUNCE_TIMEOUT)
-    },
-    handleUserAdd() {
-      if (!this.nameResult) {
-        this.nameResult = validateName(this.nameInput)
-      }
-      if (!this.dateOfBirthResult) {
-        this.dateOfBirthResult = validateDateOfBirth(this.dateOfBirthInput)
-      }
-      if (!this.emailResult) {
-        this.emailResult = validateEmail(this.emailInput)
-      }
-      if (!this.phoneNumberResult) {
-        this.phoneNumberResult = validatePhoneNumber(this.phoneNumberInput)
-      }
-
-      if (this.nameResult
-        || this.dateOfBirthResult
-        || this.emailResult
-        || this.phoneNumberResult
-      ) {
-        return
-      }
-
-      const userId = addUser({
-        name: this.nameInput,
-        dateOfBirth: this.dateOfBirthInput,
-        email: this.emailInput,
-        phoneNumber: this.phoneNumberInput,
-      })
-
-      const newUser = getUserById(userId)
-      this.users.push(newUser)
-
-      this.nameResult = null
-      this.dateOfBirthResult = null
-      this.emailResult = null
-      this.phoneNumberResult = null
-
-      this.nameInput = ''
-      this.dateOfBirthInput = ''
-      this.emailInput = ''
-      this.phoneNumberInput = ''
-    },
-    selectNewWinner() {
-      // should I check the ability to select winner if the button handles this
-
-      const notWinners = this.users.filter((u: User) => !this.winnerUsers.has(u.id))
-      const newWinner = notWinners[Math.floor(Math.random() * notWinners.length)]
-
-      this.winnerUsers.set(newWinner.id, newWinner)
-    },
-  },
-})
+  winnerUsers.value.set(newWinner.id, newWinner)
+}
 </script>
 
 <template>
@@ -207,78 +157,78 @@ export default defineComponent({
             <label for="name" class="font-bold text-neutral-900 mb-1">Name</label>
             <input
               id="name"
-              :value="nameInput"
+              v-model="name.input"
               type="text"
               placeholder="Enter user name"
               :class="{
-                'border-neutral-200 border': nameResult === null,
-                'border-red-400 border-2': nameResult?.length,
-                'border-green-400 border-2': nameResult === '',
+                'border-neutral-200 border': name.result === null,
+                'border-red-400 border-2': name.result?.length,
+                'border-green-400 border-2': name.result === '',
               }"
               class="rounded py-1 px-3 bg-neutral-100"
-              @input="handleNameInput"
+              @input="triggerFieldValidation(name)"
             >
-            <div v-if="nameResult?.length" class="text-red-500 text-sm">
-              {{ nameResult }}
+            <div v-if="name.result?.length" class="text-red-500 text-sm">
+              {{ name.result }}
             </div>
           </div>
           <div class="flex flex-col">
             <label for="birth-date" class="font-bold text-neutral-900 mb-1">Date of Birth</label>
             <input
               id="birth-date"
-              :value="dateOfBirthInput"
+              v-model="dateOfBirth.input"
               type="date"
               name="birth-date"
               :class="{
-                'border-neutral-200 border': dateOfBirthResult === null,
-                'border-red-400 border-2': dateOfBirthResult?.length,
-                'border-green-400 border-2': dateOfBirthResult === '',
+                'border-neutral-200 border': dateOfBirth.result === null,
+                'border-red-400 border-2': dateOfBirth.result?.length,
+                'border-green-400 border-2': dateOfBirth.result === '',
               }"
               class="rounded py-1 px-3 bg-neutral-100"
-              @input="handleDateOfBirthInput"
+              @input="triggerFieldValidation(dateOfBirth)"
             >
-            <div v-if="dateOfBirthResult?.length" class="text-red-500 text-sm">
-              {{ dateOfBirthResult }}
+            <div v-if="dateOfBirth.result?.length" class="text-red-500 text-sm">
+              {{ dateOfBirth.result }}
             </div>
           </div>
           <div class="flex flex-col">
             <label for="email" class="font-bold text-neutral-900 mb-1">Email</label>
             <input
               id="email"
-              :value="emailInput"
+              v-model="email.input"
               type="email"
               name="email"
               placeholder="Enter email"
               :class="{
-                'border-neutral-200 border': emailResult === null,
-                'border-red-400 border-2': emailResult?.length,
-                'border-green-400 border-2': emailResult === '',
+                'border-neutral-200 border': email.result === null,
+                'border-red-400 border-2': email.result?.length,
+                'border-green-400 border-2': email.result === '',
               }"
               class="rounded py-1 px-3 bg-neutral-100"
-              @input="handleEmailInput"
+              @input="triggerFieldValidation(email)"
             >
-            <div v-if="emailResult?.length" class="text-red-500 text-sm">
-              {{ emailResult }}
+            <div v-if="email.result?.length" class="text-red-500 text-sm">
+              {{ email.result }}
             </div>
           </div>
           <div class="flex flex-col">
             <label for="phone" class="font-bold text-neutral-900 mb-1">Phone number</label>
             <input
               id="phone"
-              :value="phoneNumberInput"
+              v-model="phoneNumber.input"
               type="tel"
               name="phone"
               placeholder="Enter Phone number"
               :class="{
-                'border-neutral-200 border': phoneNumberResult === null,
-                'border-red-400 border-2': phoneNumberResult?.length,
-                'border-green-400 border-2': phoneNumberResult === '',
+                'border-neutral-200 border': phoneNumber.result === null,
+                'border-red-400 border-2': phoneNumber.result?.length,
+                'border-green-400 border-2': phoneNumber.result === '',
               }"
               class="rounded py-1 px-3 bg-neutral-100"
-              @input="handlePhoneNumberInput"
+              @input="triggerFieldValidation(phoneNumber)"
             >
-            <div v-if="phoneNumberResult?.length" class="text-red-500 text-sm">
-              {{ phoneNumberResult }}
+            <div v-if="phoneNumber.result?.length" class="text-red-500 text-sm">
+              {{ phoneNumber.result }}
             </div>
           </div>
           <div class="flex flex-row justify-end mt-6">

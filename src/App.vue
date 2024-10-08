@@ -157,8 +157,7 @@ export default defineComponent({
 </script>
 
 <template>
-  <!-- should I rather colorize the body? -->
-  <div class="min-h-screen bg-neutral-100 py-8">
+  <div class="py-8">
     <div class="container mx-auto flex flex-col gap-4 items-center py-8">
       <section
         class="w-full bg-white border-solid border border-neutral-200 rounded p-4 flex gap-4"

@@ -61,6 +61,9 @@ export default defineComponent({
     this.users = getUsers()
   },
   methods: {
+    formatDate(isoDate: string) {
+      return new Date(isoDate).toLocaleDateString()
+    },
     // generic methods vs readible
     handleNameInput(e: Event) {
       this.nameInput = (e.target as HTMLInputElement).value
@@ -326,7 +329,7 @@ export default defineComponent({
                 {{ user.name }}
               </td>
               <td class="px-6 py-4">
-                {{ user.dateOfBirth }}
+                {{ formatDate(user.dateOfBirth) }}
               </td>
               <td class="px-6 py-4">
                 {{ user.email }}

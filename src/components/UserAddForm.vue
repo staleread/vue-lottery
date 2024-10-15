@@ -2,10 +2,11 @@
 import type { User } from '../types'
 import type { FieldType } from '../validation'
 import { reactive } from 'vue'
-import { addUser, getUserById } from '../local-storage-manager'
 import { validationStrategy } from '../validation'
 
-const emit = defineEmits<{ (e: 'validSubmit', user: User): void }>()
+const emit = defineEmits<{
+  (e: 'validSubmit', user: Omit<User, 'id'>): void
+}>()
 
 const DEBOUNCE_TIMEOUT = 500
 
@@ -67,16 +68,14 @@ function handleUserAdd() {
     return
   }
 
-  const userId = addUser({
+  const dto = {
     name: name.input,
     dateOfBirth: dateOfBirth.input,
     email: email.input,
     phoneNumber: phoneNumber.input,
-  })
+  }
 
-  const newUser = getUserById(userId)
-
-  emit('validSubmit', newUser)
+  emit('validSubmit', dto)
 
   fields.forEach((field: Field) =>
     Object.assign(field, { input: '', result: null }),
